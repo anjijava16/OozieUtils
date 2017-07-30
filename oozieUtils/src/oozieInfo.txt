@@ -1,0 +1,135 @@
+Excerpt from Apache documentation-
+Bundle is a higher-level oozie abstraction that will batch a set of coordinator applications. The user will be able to start/stop/suspend/resume/rerun in the bundle level resulting a better and easy operational control.
+More specififcally, the oozie Bundle system allows the user to define and execute a bunch of coordinator applications often called a data pipeline. There is no explicit dependency among the coordinator applications in a bundle. However, a user could use the data dependency of coordinator applications to create an implicit data application pipeline.
+
+Apache documentation:
+http://oozie.apache.org/docs/3.3.0/BundleFunctionalSpec.html#a1._Bundle_Overview
+
+
+
+A bundle job can have one to many coordinator jobs.
+A coordinator job can have one to many workflows.
+A workflow can have one to many actions.
+
+3.0. Sample program
+Highlights:
+The sample bundle application is time triggered.  The start time is defined in the bundle job.properties file.  The bundle application starts two coordinator applications- as defined in the bundle definition file - bundleConfirguration.xml.
+
+The first coordinator job is time triggered.  The start time is defined in the bundle job.properties file.  It runs a workflow, that includes a java main action.  The java program parses some log files and generates a report.  The output of the java action is a dataset (the report) which is the trigger for the next coordinator job.
+
+The second coordinator job gets triggered upon availability of the file _SUCCESS in the output directory of the workflow application of the first coordinator application.  It executes a workflow that has a sqoop action;  The sqoop action pipes the output of the first coordinator job to a mysql database.
+
+
+
+
+1.0. About Apache Oozie
+1.0.1. What is Apache Oozie?  
+It is an extensible, scalable, and data-aware service to orchestrate Hadoop jobs, manage job dependencies, and execute jobs based on event triggers such as time and data availability.  
+
+There are three types of jobs in Oozie:
+1.  Oozie workflow jobs
+ DAGS of actions which are jobs such as shell scripts, MapReduce, Sqoop, Streaming, Pipes, Pig, Hive etc.
+2.  Oozie coordinator jobs 
+Invoke Oozie workflow jobs based on specified event triggers - date/time, data availability.
+3.  Oozie bundle jobs 
+Related oozie coordinator jobs managed as a single job  
+
+- An Oozie bundle job can have one to many coordinator jobs
+- An Oozie coordinator job can have one to many workflow jobs
+- An Oozie workflow can have one to many actions
+- An Oozie workflow can have zero to many sub-workflows
+   
+1.0.2. Glossary of Oozie terminology
+(From Apache Oozie documentation)
+Action
+An execution/computation task (Map-Reduce job, Pig job, a shell command). It can also be referred as task or 'action node'.
+Workflow 
+A collection of actions arranged in a control dependency DAG (Direct Acyclic Graph). "control dependency" from one action to another means that the second action can't run until the first action has completed.
+Workflow Definition 
+A programmatic description of a workflow that can be executed.
+Workflow Definition Language
+The language used to define a Workflow Definition.
+Workflow Job 
+An executable instance of a workflow definition.
+Workflow Engine
+A system that executes workflows jobs. It can also be referred as a DAG engine.
+
+
+1.0.3. Oozie Architecture
+Oozie is a Java Web-Application that runs in a Java servlet-container (Tomcat) and uses a database to store:
+1.  Definitions of Oozie jobs - workflow/coordinator/bundle
+2.  Currently running workflow instances, including instance states and variables
+
+Oozie works with HSQL, Derby, MySQL, Oracle or PostgreSQL databases.  By default, Oozie is configured to use Embedded Derby.  Oozie bundles the JDBC drivers for HSQL, Embedded Derby and PostgreSQL.
+
+For information about the different kinds of configuration such as User authentication, logging etc, refer:
+http://oozie.apache.org/docs/3.3.0/AG_Install.html#Oozie_Configuration  
+
+
+This diagram is from a Yahoo deck on Oozie..
+
+
+
+2.0. Oozie Workflow
+2.0.1 What is an Oozie workflow?
+An Oozie workflow is a DAG of hadoop computation/processing tasks (referred to as "actions") and flow "controls" to coordinate the tasks and manage dependencies of actions and their results.  
+2.01.1. Actions:
+Oozie workflow actions start jobs on remote nodes, and upon completion of the same, the processes executing the jobs callback Oozie and notify completion in response to which Oozie will start the next action.  Actions can be hadoop fs , ssh, map reduce, hive, pig, sqoop, distcp, http, email commands or custom actions.   
+
+2.0.1.2. Controls:
+Controls manage the execution path of actions and include start, fork, join, decision and end.
+
+2.0.1.3. Parameterizing actions and decisions:
+Actions and decisions can be parameterized with job properties, actions output (i.e. Hadoop counters) and file information (file exists, file size, etc). Formal parameters are expressed in the workflow definition as ${VAR} variables.
+
+2.0.1.4. Workflow application:
+A workflow application is an instance of a workflow, and is essentially a zip file containing everything needed to execute the actions within the workflows -  the workflow definition (an XML file), JARs for Map/Reduce jobs, shells for streaming Map/Reduce jobs, native libraries, Hive/Pig/Sqoop scripts, files for distributed cache and other resource files.
+
+2.0.1.5. Workflow definition:
+A workflow definition is a DAG with control flow nodes and action nodes expressed in the XML based workflow definition language called hPDL (Hadoop Process Definition Language).
+
+2.0.1.6. Workflow nodes:
+Nodes encompassing actions in hPDL, are called action nodes, and nodes encompassing controls are called control flow nodes and together are referred to as workflow nodes.
+
+
+2.0.2. Oozie control flow functionality
+[Straight from Apache Oozie documentation]
+
+2.0.2.1. Start control node
+The start node is the entry point for a workflow job, it indicates the first workflow node the workflow job must transition to.
+When a workflow is started, it automatically transitions to the node specified in the start .
+A workflow definition must have one start node.
+
+2.0.2.2. End control node
+The end node is the end for a workflow job, it indicates that the workflow job has completed successfully.  When a workflow job reaches the end it finishes successfully (SUCCEEDED).  If one or more actions started by the workflow job are executing when the end node is reached, the actions will be killed. In this scenario the workflow job is still considered as successfully run.  A workflow definition must have one end node.
+
+2.0.2.3. Kill control node
+The kill node allows a workflow job to kill itself.  When a workflow job reaches the kill it finishes in error (KILLED).  If one or more actions started by the workflow job are executing when the kill node is reached, the actions will be killed.  A workflow definition may have zero or more kill nodes.
+
+2.0.2.4. Decision node
+A decision node enables a workflow to make a selection on the execution path to follow.  The behavior of a decision node can be seen as a switch-case statement.
+A decision node consists of a list of predicates-transition pairs plus a default transition. Predicates are evaluated in order or appearance until one of them evaluates to true and the corresponding transition is taken. If none of the predicates evaluates to true the default transition is taken.  Predicates are JSP Expression Language (EL) expressions that resolve into a boolean value, true or false.  The default element in the decision node indicates the transition to take if none of the predicates evaluates to true.  All decision nodes must have a default element to avoid bringing the workflow into an error state if none of the predicates evaluates to true.
+
+2.0.2.5. Fork/join control nodes
+A fork node splits one path of execution into multiple concurrent paths of execution.  A join node waits until every concurrent execution path of a previous fork node arrives to it.  The fork and join nodes must be used in pairs. The join node assumes concurrent execution paths are children of the same fork node.
+
+
+3.0. Oozie actions
+Only two action types are covered in this blog.  More in subsequent blogs on oozie.
+3.0.1. About the FS (hdfs) action
+"The fs action allows to manipulate files and directories in HDFS from a workflow application. The supported commands are move , delete , mkdir , chmod , touchz and chgrp .
+The FS commands are executed synchronously from within the FS action, the workflow job will wait until the specified file commands are completed before continuing to the next action.  Path names specified in the fs action can be parameterized (templatized) using EL expressions.  Each file path must specify the file system URI, for move operations, the target must not specified the system URI.
+
+IMPORTANT: All the commands within fs action do not happen atomically, if a fs action fails half way in the commands being executed, successfully executed commands are not rolled back. The fs action, before executing any command must check that source paths exist and target paths don't exist (constraint regarding target relaxed for the move action. See below for details), thus failing before executing any command. Therefore the validity of all paths specified in one fs action are evaluated before any of the file operation are executed. Thus there is less chance of an error occurring while the fs action executes."
+
+3.0.2. About the email action
+
+The email action allows sending emails in Oozie from a workflow application. An email action must provide to addresses, cc addresses (optional), a subject and a body . Multiple recipients of an email can be provided as comma separated addresses.  The email action is executed synchronously, and the workflow job will wait until the specified emails are sent before continuing to the next action.
+
+Apache documentation:
+http://oozie.apache.org/docs/3.3.0/DG_EmailActionExtension.html
+
+
+
+4.0. Building and executing an Oozie workflow with HDFS action and Email action
+Pictorial overview

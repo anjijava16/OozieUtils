@@ -1,0 +1,35 @@
+For Testing  REST API Client Tools : CURL (OR) SOAP UI (OR) POSTMAN (OR)FireFox REST Client (OR) Google REST Client
+
+$ curl http://localhost:11000/oozie/v1/jobs
+
+Response is JSON Format Output
+
+$ curl 'http://localhost:11000/oozie/v1/jobs?len=1000'
+
+
+Maybe we just only need Oozie workflow job IDs, use this command:
+
+$ curl 'http://localhost:11000/oozie/v1/jobs?len=1000' | sed 's/id\[/\n/g; s/W\]/W\n/g' | grep "oozie-oozi-W$"
+
+0006030-140210061306533-oozie-oozi-W
+0006031-140210061306533-oozie-oozi-W
+0006032-140210061306533-oozie-oozi-W
+0006033-140210061306533-oozie-oozi-W
+0006034-140210061306533-oozie-oozi-W
+...
+
+Then we can do something with the output by script conveniently, such as killing all workflows:
+
+$ curl 'http://localhost:11000/oozie/v1/jobs?len=1000' | sed 's/id\[/\n/g; s/W\]/W\n/g' | grep "oozie-oozi-W$"  | while read job_id; do oozie job -kill $job_id; done
+
+OK, you may want to get all RUNNING workflow job IDs, use filter=status%3DRUNNING:
+
+$ curl 'http://localhost:11000/oozie/v1/jobs?len=1000&filter=status%3DRUNNING'
+{"total":2, ...
+
+
+So at the beginning of the output line, you will see how many workflow jobs are running. After that, the JSON string shows the detailed information of each job.
+
+If you want to get other types of jobs, you can add jobtype= to URL, e.g, the following command will give the list of coordinator job IDs :
+
+$ curl 'http://localhost:11000/oozie/v1/jobs?jobtype=coord&len=2000' | sed 's/id\[/\n/g; s/C]/C\n/g' | grep "oozie-oozi-C$"

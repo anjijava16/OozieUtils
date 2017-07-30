@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="oozie-hive-job">
+    <start to="hive-node"/>
+ 
+    <action name="hive-node">
+        <hive>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/${rootFolder}/oozieoutput"/>
+            </prepare>
+            <script>{dbScripts}/hivescript.hql</script>
+        </hive>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+ 
+    <kill name="fail">
+        <message>Hive failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>

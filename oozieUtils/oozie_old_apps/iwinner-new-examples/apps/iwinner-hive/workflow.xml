@@ -1,0 +1,28 @@
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="wordcount-hive-wf">
+    <start to="wordcount-hive-node"/>
+    <action name="wordcount-hive-node">
+        <hive xmlns="uri:oozie:hive-action:0.2">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${outputDir}"/>
+            </prepare>
+            <configuration>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <script>wordcount.hql</script>
+            <param>INPUT=${inputDir}</param>
+            <param>OUTPUT=${outputDir}</param>
+        </hive>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+
+    <kill name="fail">
+        <message>Hive failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
